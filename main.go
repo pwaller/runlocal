@@ -18,6 +18,34 @@ import (
     "code.google.com/p/x-go-binding/xgb"
 )
 
+// 
+func try_shorten_host(host string) string {
+    config_fd, err := os.Open("/etc/resolv.conf")
+    if err != nil { return host }
+    
+    reader:= bufio.NewReaderSize(config_fd, 1024*1024)
+    new_host := host
+    
+    for {
+        bline, prefix, err := reader.ReadLine()
+        line := string(bline)
+        if err == io.EOF { break }
+        if err != nil { log.Panic(err) }
+        if prefix { log.Panic("Urgh, line >1mb in /etc/resolv.conf?!") }
+        
+        line = strings.TrimSpace(line)
+        if len(line) == 0 { continue }
+        
+        fields := strings.Fields(line)
+        if fields[0] == "host" || fields[0] == "search" {
+            if len(fields) > 1 && strings.HasSuffix(host, fields[1]) {
+                new_host = host[:len(host) - len(fields[1]) - 1]
+            }
+        }
+    }
+    return new_host
+}
+
 func parse_ssh_config() map[string] string {
     
     result := make(map[string] string)
@@ -54,7 +82,8 @@ func parse_ssh_config() map[string] string {
 }
 
 func map_file_args(host, cmd string, args []string) []string {
-    mapping := parse_ssh_config()    
+    host = try_shorten_host(host)
+    mapping := parse_ssh_config()
     replacement, ok := mapping[host]
     if !ok {
         log.Print("Host not in mapping: ", host, " ", replacement)
