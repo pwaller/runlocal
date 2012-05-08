@@ -57,7 +57,7 @@ func map_file_args(host, cmd string, args []string) []string {
     mapping := parse_ssh_config()    
     replacement, ok := mapping[host]
     if !ok {
-        log.Print("Host not in mapping: ", host, replacement, ok)
+        log.Print("Host not in mapping: ", host, " ", replacement)
         replacement = host
     }
     replacement = "sftp://" + replacement
@@ -75,7 +75,7 @@ func run(args []string) {
     
     args = map_file_args(host, cmd, args)
     
-    fmt.Println("Executing: ", cmd, args)
+    log.Print("Executing: ", cmd, args)
     p := exec.Command(cmd, args...)
     stdout, _ := p.StdoutPipe()
     err := p.Start()
@@ -89,10 +89,10 @@ func run(args []string) {
             if err != nil {
                 break
             }
-            fmt.Println("n, str = ", n, string(bytes))
+            log.Print("output: ", n, string(bytes))
         }
         p.Wait()
-        fmt.Println("Program exited")
+        log.Print("Program exited")
     }()
 }
 
@@ -112,12 +112,12 @@ func start_server(c *xgb.Conn, s *xgb.ScreenInfo, rl_execute_atom xgb.Id) {
         return result
     }
     
+    log.Print("Ready and waiting..")
     // Event loop
     for {
         reply, err := c.WaitForEvent()
-        if err != nil {
-            log.Panic("Error in event loop:", err)
-        }
+        if err != nil { log.Panic("Error in event loop:", err) }
+        
         switch event := reply.(type) {
         case xgb.PropertyNotifyEvent:
             if event.Window == win && event.Atom == rl_execute_atom {
@@ -129,7 +129,7 @@ func start_server(c *xgb.Conn, s *xgb.ScreenInfo, rl_execute_atom xgb.Id) {
 }
 
 func connect(c *xgb.Conn, s *xgb.ScreenInfo, rl_execute_atom xgb.Id, args []string) {
-    fmt.Println("Connecting with args:", args)
+    log.Println("Connecting with args:", args)
     
     tree, err := c.QueryTree(s.Root)
     if err != nil {
@@ -154,12 +154,12 @@ func connect(c *xgb.Conn, s *xgb.ScreenInfo, rl_execute_atom xgb.Id, args []stri
         if reply.ValueLen != 0 {
             c.ChangeProperty(xgb.PropModeReplace, tree.Children[i], rl_execute_atom, 
                              xgb.AtomString, 8, []byte(strings.Join(args, "\x00")))
-            fmt.Println(" .. sent")
+            log.Println(" .. sent")
             success = true
         }
     }
     if success != true {
-        fmt.Println(" .. server not running?")
+        log.Println(" .. server not running?")
     }
 }
 
@@ -200,8 +200,7 @@ func main() {
 
     c, err := xgb.Dial(os.Getenv("DISPLAY"))
     if err != nil {
-        fmt.Printf("cannot connect: %v\n", err)
-        os.Exit(1)
+        log.Panic("cannot connect: %v\n", err)
     }
     defer c.Close()
     s := c.DefaultScreen()
