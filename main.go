@@ -227,6 +227,15 @@ func main() {
     flag.Usage = usage
     flag.Parse()
 
+    if remote := os.Getenv("SSH_CONNECTION"); remote == "" && len(flag.Args()) != 0 {
+        invoked_as := os.Args[0]
+        actual_binary, err := os.Readlink("/proc/self/exe")
+        if err != nil { log.Panic("/proc/self/exe doesn't exist!") }
+        log.Print("Invoked as: '", invoked_as, "' (actual=", actual_binary, ")");
+        log.Panic("Not yet implemented: Would have run locally")
+        return
+    }
+
     c, err := xgb.Dial(os.Getenv("DISPLAY"))
     if err != nil {
         log.Panic("cannot connect: %v\n", err)
