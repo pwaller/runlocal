@@ -71,9 +71,9 @@ func parse_ssh_config() map[string] string {
         if len(line) == 0 { continue }
         
         fields := strings.Fields(line)
-        if fields[0] == "host" {
+        if strings.ToLower(fields[0]) == "host" {
             currenthost = fields[1]
-        } else if fields[0] == "hostname" {
+        } else if strings.ToLower(fields[0]) == "hostname" {
             result[fields[1]] = currenthost
         }
     }
